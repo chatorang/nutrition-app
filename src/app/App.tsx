@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { deleteCustomFood, listCustomFoods } from '../db/customFoods.ts'
 import { MEALS } from '../db/db.ts'
 import { logsByDate } from '../db/foodLogs.ts'
 import { formatDateKey, todayKey } from '../lib/dates.ts'
@@ -36,7 +37,12 @@ export function App() {
         {tab !== 'meal' && (
           <main className="content">
             {tab === 'home' && <HomeTab onGoMeal={() => setTab('meal')} />}
-            {tab === 'settings' && <SetupCheck />}
+            {tab === 'settings' && (
+              <>
+                <CustomFoodList />
+                <SetupCheck />
+              </>
+            )}
             {(tab === 'exercise' || tab === 'review') && <ComingSoon name={current.label} />}
           </main>
         )}
@@ -84,7 +90,9 @@ function HomeTab({ onGoMeal }: { onGoMeal: () => void }) {
             <div key={r.label}><dt>{r.label}</dt><dd>{fmt(r.grams, 1)}g{r.pct !== undefined && <small>　{fmt(r.pct)}%</small>}</dd></div>
           ))}
         </dl>
-        {unknown.energyKcal > 0 && <p className="muted small">値が不明な記録を含みます。</p>}
+        {unknown.energyKcal + unknown.proteinG + unknown.fatG + unknown.carbG > 0 && (
+          <p className="muted small">値が不明な食品を含むため、実際より少なく出ている項目があります。</p>
+        )}
         <button type="button" className="primary" onClick={onGoMeal}>{items.length === 0 ? '食事を記録する' : '食事を追加・編集する'}</button>
       </section>
       <section className="card">
@@ -92,6 +100,37 @@ function HomeTab({ onGoMeal }: { onGoMeal: () => void }) {
         <p className="muted">プロフィール（年齢・体重など）の設定画面ができると、目標カロリーと栄養素ごとの過不足がここに出ます。</p>
       </section>
     </>
+  )
+}
+
+/** 自分で登録した食品の一覧。削除は押し間違い防止のため2回押し。 */
+function CustomFoodList() {
+  const foods = useLiveQuery(() => listCustomFoods(), []) ?? []
+  const [confirming, setConfirming] = useState<number | null>(null)
+  return (
+    <section className="card">
+      <h2>自分で登録した食品</h2>
+      {foods.length === 0 ? (
+        <p className="muted">まだありません。食事の「＋追加」→「自分で食品を登録する」から追加できます。</p>
+      ) : (
+        <ul className="rows inset">
+          {foods.map((f) => (
+            <li key={f.id} className="row split static">
+              <span>
+                <span className="row-main">{f.name}</span>
+                <span className="row-sub">100gあたり {fmt(f.per100g.energyKcal)}kcal</span>
+              </span>
+              {confirming === f.id ? (
+                <button type="button" className="danger" onClick={() => deleteCustomFood(f.id).then(() => setConfirming(null))}>本当に削除</button>
+              ) : (
+                <button type="button" className="link" onClick={() => setConfirming(f.id)}>削除</button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted small">削除しても、過去の食事記録は変わりません。</p>
+    </section>
   )
 }
 

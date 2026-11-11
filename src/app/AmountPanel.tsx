@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { Unit } from '../data/portions.ts'
 import { customUnits, saveCustomUnit, type Amount } from '../db/foodLogs.ts'
 import { scale, type Nutrients } from '../lib/nutrition.ts'
-import { fmt, presetUnits } from './foods.ts'
+import { fmt, presetUnits, withUnit } from './foods.ts'
 
 const QUICK_GRAMS = [50, 100, 150, 200, 300]
 const QUICK_COUNTS = [0.5, 1, 1.5, 2, 3]
@@ -23,8 +23,14 @@ interface Props {
 }
 
 /** 量を決めて記録・更新する画面。グラムでも「茶碗1杯」などの単位でも入れられ、カロリーなどがその場で変わる。 */
-export function AmountPanel({ title, officialName, foodId, per100g, initial, submitLabel, onSubmit, onDelete }: Props) {
-  const custom = useLiveQuery(() => customUnits(foodId), [foodId]) ?? []
+export function AmountPanel(props: Props) {
+  // 自分で登録した単位を読み込んでから中身を出す（最初に選んでおく単位を正しく決めるため）。
+  const custom = useLiveQuery(() => customUnits(props.foodId), [props.foodId])
+  if (!custom) return null
+  return <AmountPanelInner {...props} custom={custom} />
+}
+
+function AmountPanelInner({ title, officialName, foodId, per100g, initial, submitLabel, onSubmit, onDelete, custom }: Props & { custom: Unit[] }) {
   const presets = presetUnits(foodId)
   // 自分で登録した単位を先に。同じ名前があれば自分の方を使う。前回使った単位が今は無い場合も選べるようにしておく。
   const units: Unit[] = [...custom, ...presets.filter((p) => !custom.some((c) => c.label === p.label))]
@@ -32,7 +38,7 @@ export function AmountPanel({ title, officialName, foodId, per100g, initial, sub
     units.push({ label: initial.unitLabel, grams: initial.grams / initial.unitCount })
   }
 
-  const startWithUnit = initial ? initial.unitLabel : presets[0]?.label
+  const startWithUnit = initial ? initial.unitLabel : units[0]?.label
   const [unitLabel, setUnitLabel] = useState<string | null>(startWithUnit ?? null)
   const [text, setText] = useState(String(initial ? (initial.unitLabel ? initial.unitCount : initial.grams) : startWithUnit ? 1 : 100))
   const [adding, setAdding] = useState(false)
@@ -108,11 +114,11 @@ export function AmountPanel({ title, officialName, foodId, per100g, initial, sub
       <div className="nutri-box">
         <div className="kcal"><strong>{fmt(n.energyKcal)}</strong><span>kcal</span>{unit && valid && <span className="small">（{fmt(grams, 1)}g）</span>}</div>
         <dl className="pfc">
-          <div><dt>たんぱく質</dt><dd>{fmt(n.proteinG, 1)}g</dd></div>
-          <div><dt>脂質</dt><dd>{fmt(n.fatG, 1)}g</dd></div>
-          <div><dt>炭水化物</dt><dd>{fmt(n.carbG, 1)}g</dd></div>
-          <div><dt>食物繊維</dt><dd>{fmt(n.fiberG, 1)}g</dd></div>
-          <div><dt>食塩相当量</dt><dd>{fmt(n.saltG, 1)}g</dd></div>
+          <div><dt>たんぱく質</dt><dd>{withUnit(n.proteinG, 'g')}</dd></div>
+          <div><dt>脂質</dt><dd>{withUnit(n.fatG, 'g')}</dd></div>
+          <div><dt>炭水化物</dt><dd>{withUnit(n.carbG, 'g')}</dd></div>
+          <div><dt>食物繊維</dt><dd>{withUnit(n.fiberG, 'g')}</dd></div>
+          <div><dt>食塩相当量</dt><dd>{withUnit(n.saltG, 'g')}</dd></div>
         </dl>
       </div>
 

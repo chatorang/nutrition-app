@@ -147,3 +147,21 @@ button { font: inherit; color: inherit; }
 .unit-fields input { font: inherit; font-size: 1rem; color: var(--text); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); min-width: 0; width: 100%; }
 .unit-fields input:focus { outline: 2px solid var(--accent); }
 .gram-input span { white-space: nowrap; }
+
+/* ---- 食品の登録 ---- */
+.secondary.wide { width: 100%; margin-bottom: 8px; }
+.pad-top { padding-top: 16px; }
+.link.left { text-align: left; padding: 0; }
+.badge { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); font-size: 0.7rem; font-weight: 700; vertical-align: middle; }
+.row.static { cursor: default; }
+.nf-name { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.nf-name input, .nf-input input { font: inherit; font-size: 1rem; color: var(--text); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.nf-name input:focus, .nf-input input:focus { outline: 2px solid var(--accent); }
+.nutri-box.nf { gap: 0; padding: 4px 16px; }
+.nf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.nf-row + .nf-row { border-top: 1px solid var(--line); }
+.nf-row em { font-style: normal; font-size: 0.7rem; color: var(--warn); margin-left: 6px; }
+.nf-input { display: flex; align-items: baseline; gap: 6px; }
+.nf-input input { width: 120px; text-align: right; background: var(--bg); font-variant-numeric: tabular-nums; }
+.nf-input small { width: 2.4em; color: var(--muted); }
+.nf .link { min-height: 48px; }

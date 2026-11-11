@@ -32,9 +32,19 @@ export interface CustomUnit {
   grams: number
 }
 
+/** 自分で登録した食品 */
+export interface CustomFood {
+  id: number
+  name: string
+  /** 100gあたりの栄養素。入力しなかった項目は null（不明） */
+  per100g: Nutrients
+  createdAt: number
+}
+
 export class AppDb extends Dexie {
   foodLogs!: EntityTable<FoodLog, 'id'>
   units!: EntityTable<CustomUnit, 'id'>
+  customFoods!: EntityTable<CustomFood, 'id'>
 
   constructor(name = 'eiyo-note') {
     super(name)
@@ -43,6 +53,9 @@ export class AppDb extends Dexie {
     })
     this.version(2).stores({
       units: '++id, foodId',
+    })
+    this.version(3).stores({
+      customFoods: '++id, createdAt',
     })
   }
 }

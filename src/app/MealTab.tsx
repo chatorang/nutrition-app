@@ -8,7 +8,6 @@ import { scale, sum } from '../lib/nutrition.ts'
 import { displayName } from '../lib/search.ts'
 import { AddFoodSheet } from './AddFoodSheet.tsx'
 import { AmountPanel } from './AmountPanel.tsx'
-import { closeLayer, openLayer } from './backstack.ts'
 import { fmt } from './foods.ts'
 
 type Sheet = { kind: 'add'; meal: Meal } | { kind: 'edit'; log: FoodLog } | null
@@ -25,10 +24,8 @@ function Overlay({ active, children }: { active: boolean; children: ReactNode })
 export function MealTab({ active }: { active: boolean }) {
   const [date, setDate] = useState(todayKey)
   const [sheet, setSheet] = useState<Sheet>(null)
-  const open = (next: Sheet) => {
-    setSheet(next)
-    openLayer(() => setSheet(null))
-  }
+  const open = setSheet
+  const close = () => setSheet(null)
   // 日付を切り替えた直後は、前の日の結果が一瞬残る。日付が合うものだけを表示に使う。
   const loaded = useLiveQuery(async () => ({ date, logs: await logsByDate(date) }), [date])
   const day = loaded?.date === date ? loaded.logs : undefined
@@ -80,11 +77,11 @@ export function MealTab({ active }: { active: boolean }) {
       })}
 
       <Overlay active={active}>
-        {sheet?.kind === 'add' && <AddFoodSheet date={date} meal={sheet.meal} />}
+        {sheet?.kind === 'add' && <AddFoodSheet date={date} meal={sheet.meal} onClose={close} />}
         {sheet?.kind === 'edit' && (
           <div className="sheet" role="dialog" aria-label="記録を編集">
             <header className="sheet-head">
-              <button type="button" className="link" onClick={closeLayer}>‹ 戻る</button>
+              <button type="button" className="link" onClick={close}>‹ 戻る</button>
               <h1>記録を編集</h1>
               <span />
             </header>
@@ -98,11 +95,11 @@ export function MealTab({ active }: { active: boolean }) {
                 submitLabel="量を更新"
                 onSubmit={async (amount) => {
                   await updateFoodLogAmount(sheet.log.id, amount)
-                  closeLayer()
+                  close()
                 }}
                 onDelete={async () => {
                   await deleteFoodLog(sheet.log.id)
-                  closeLayer()
+                  close()
                 }}
               />
             </div>

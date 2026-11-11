@@ -64,3 +64,9 @@ const DISH_UNITS: Record<string, Unit[]> = Object.fromEntries(
 export function presetUnits(foodId: string): Unit[] {
   return [...(DISH_UNITS[foodId] ?? []), ...(PRESET_UNITS[foodId] ?? [])]
 }
+
+/** 単位つきの表示。不明は単位を付けずに「—」。 */
+export function withUnit(value: number | null | undefined, unit: string, digits = 1): string {
+  const text = fmt(value, digits)
+  return text === '—' ? text : `${text}${unit}`
+}
