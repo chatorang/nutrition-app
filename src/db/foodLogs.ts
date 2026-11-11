@@ -1,6 +1,6 @@
 import type { Nutrients } from '../lib/nutrition.ts'
 import { scale } from '../lib/nutrition.ts'
-import { db as defaultDb, MEALS, type AppDb, type FoodLog, type Meal } from './db.ts'
+import { db as defaultDb, MEALS, type AppDb, type CustomUnit, type FoodLog, type Meal } from './db.ts'
 
 export interface FoodForLog {
   id: string
@@ -8,7 +8,16 @@ export interface FoodForLog {
   per100g: Nutrients
 }
 
-export async function addFoodLog(input: { date: string; meal: Meal; food: FoodForLog; grams: number }, db: AppDb = defaultDb): Promise<number> {
+/** 量の指定。単位で入力した場合は単位名と個数も一緒に残す（表示と、次回の初期値に使う）。 */
+export interface Amount {
+  grams: number
+  unitLabel?: string
+  unitCount?: number
+}
+
+const unitFields = (a: Amount) => (a.unitLabel && a.unitCount ? { unitLabel: a.unitLabel, unitCount: a.unitCount } : {})
+
+export async function addFoodLog(input: { date: string; meal: Meal; food: FoodForLog } & Amount, db: AppDb = defaultDb): Promise<number> {
   assertGrams(input.grams)
   return db.foodLogs.add({
     date: input.date,
@@ -16,18 +25,25 @@ export async function addFoodLog(input: { date: string; meal: Meal; food: FoodFo
     foodId: input.food.id,
     name: input.food.name,
     grams: input.grams,
+    ...unitFields(input),
     nutrients: scale(input.food.per100g, input.grams),
     createdAt: Date.now(),
   })
 }
 
 /** 量を変える。栄養素は記録時のスナップショットから比例で計算し直す。 */
-export async function updateFoodLogGrams(id: number, grams: number, db: AppDb = defaultDb): Promise<void> {
-  assertGrams(grams)
+export async function updateFoodLogAmount(id: number, amount: Amount, db: AppDb = defaultDb): Promise<void> {
+  assertGrams(amount.grams)
   const log = await db.foodLogs.get(id)
   if (!log) return
-  const per100g = scale(log.nutrients, 100 / log.grams * 100)
-  await db.foodLogs.update(id, { grams, nutrients: scale(per100g, grams) })
+  const per100g = scale(log.nutrients, 10000 / log.grams)
+  await db.foodLogs.put({
+    ...log,
+    grams: amount.grams,
+    unitLabel: amount.unitLabel && amount.unitCount ? amount.unitLabel : undefined,
+    unitCount: amount.unitLabel && amount.unitCount ? amount.unitCount : undefined,
+    nutrients: scale(per100g, amount.grams),
+  })
 }
 
 export async function deleteFoodLog(id: number, db: AppDb = defaultDb): Promise<void> {
@@ -47,6 +63,8 @@ export interface RecentFood {
   name: string
   /** 前回記録した量。次も同じ量を初期値にする */
   grams: number
+  unitLabel?: string
+  unitCount?: number
   /** 100gあたりの栄養素（前回の記録から逆算）。食品データにない食品でも再記録できるようにする */
   per100g: Nutrients
 }
@@ -63,10 +81,32 @@ export async function recentFoods(meal: Meal, limit = 30, db: AppDb = defaultDb)
   for (const log of logs) {
     if (seen.has(log.foodId)) continue
     seen.add(log.foodId)
-    const item = { foodId: log.foodId, name: log.name, grams: log.grams, per100g: scale(log.nutrients, 100 / log.grams * 100) }
+    const item = { foodId: log.foodId, name: log.name, grams: log.grams, ...unitFields(log), per100g: scale(log.nutrients, 10000 / log.grams) }
     ;(log.meal === meal ? same : other).push(item)
   }
   return [...same, ...other].slice(0, limit)
+}
+
+/** その食品に自分で登録した単位。 */
+export async function customUnits(foodId: string, db: AppDb = defaultDb): Promise<CustomUnit[]> {
+  return db.units.where('foodId').equals(foodId).toArray()
+}
+
+/** 単位を登録する。同じ食品に同じ名前があれば上書きする（器を変えたときなど）。 */
+export async function saveCustomUnit(foodId: string, label: string, grams: number, db: AppDb = defaultDb): Promise<void> {
+  const name = label.trim()
+  if (!name) throw new Error('単位の名前を入力してください')
+  assertGrams(grams)
+  const existing = (await customUnits(foodId, db)).find((u) => u.label === name)
+  if (existing) await db.units.update(existing.id, { grams })
+  else await db.units.add({ foodId, label: name, grams })
+}
+
+/** 量の表示。例:「茶碗1杯（150g）」「茶碗1杯 ×2（300g）」「120g」 */
+export function amountText(a: Amount): string {
+  const g = `${Math.round(a.grams * 10) / 10}g`
+  if (!a.unitLabel || !a.unitCount) return g
+  return a.unitCount === 1 ? `${a.unitLabel}（${g}）` : `${a.unitLabel} ×${a.unitCount}（${g}）`
 }
 
 function assertGrams(grams: number): void {

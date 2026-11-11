@@ -1,19 +1,34 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { MEALS, MEAL_LABEL, type FoodLog, type Meal } from '../db/db.ts'
-import { deleteFoodLog, logsByDate, updateFoodLogGrams } from '../db/foodLogs.ts'
+import { amountText, deleteFoodLog, logsByDate, updateFoodLogAmount } from '../db/foodLogs.ts'
 import { addDays, formatDateKey, todayKey } from '../lib/dates.ts'
 import { scale, sum } from '../lib/nutrition.ts'
 import { displayName } from '../lib/search.ts'
 import { AddFoodSheet } from './AddFoodSheet.tsx'
 import { AmountPanel } from './AmountPanel.tsx'
+import { closeLayer, openLayer } from './backstack.ts'
 import { fmt } from './foods.ts'
 
 type Sheet = { kind: 'add'; meal: Meal } | { kind: 'edit'; log: FoodLog } | null
 
-export function MealTab() {
+/**
+ * 追加・編集の画面は、下のタブバーを隠さない位置（#stage）に重ねて出す。
+ * ほかのタブに移っても入力途中の状態は残り、食事タブに戻ると続きから再開できる。
+ */
+function Overlay({ active, children }: { active: boolean; children: ReactNode }) {
+  const stage = document.getElementById('stage')
+  return stage ? createPortal(<div hidden={!active}>{children}</div>, stage) : null
+}
+
+export function MealTab({ active }: { active: boolean }) {
   const [date, setDate] = useState(todayKey)
   const [sheet, setSheet] = useState<Sheet>(null)
+  const open = (next: Sheet) => {
+    setSheet(next)
+    openLayer(() => setSheet(null))
+  }
   // 日付を切り替えた直後は、前の日の結果が一瞬残る。日付が合うものだけを表示に使う。
   const loaded = useLiveQuery(async () => ({ date, logs: await logsByDate(date) }), [date])
   const day = loaded?.date === date ? loaded.logs : undefined
@@ -41,7 +56,7 @@ export function MealTab() {
             <header className="meal-head">
               <h2>{MEAL_LABEL[meal]}</h2>
               <span className="muted">{logs.length > 0 ? `${fmt(kcal)} kcal` : ''}</span>
-              <button type="button" className="add" onClick={() => setSheet({ kind: 'add', meal })} aria-label={`${MEAL_LABEL[meal]}に追加`}>＋ 追加</button>
+              <button type="button" className="add" onClick={() => open({ kind: 'add', meal })} aria-label={`${MEAL_LABEL[meal]}に追加`}>＋ 追加</button>
             </header>
             {logs.length === 0 ? (
               <p className="muted small">まだ記録がありません</p>
@@ -49,10 +64,10 @@ export function MealTab() {
               <ul className="rows inset">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <button type="button" className="row split" onClick={() => setSheet({ kind: 'edit', log })}>
+                    <button type="button" className="row split" onClick={() => open({ kind: 'edit', log })}>
                       <span>
                         <span className="row-main">{displayName(log.name)}</span>
-                        <span className="row-sub">{fmt(log.grams, 1)}g</span>
+                        <span className="row-sub">{amountText(log)}</span>
                       </span>
                       <span className="row-kcal">{fmt(log.nutrients.energyKcal)}<small>kcal</small></span>
                     </button>
@@ -64,33 +79,36 @@ export function MealTab() {
         )
       })}
 
-      {sheet?.kind === 'add' && <AddFoodSheet date={date} meal={sheet.meal} onClose={() => setSheet(null)} />}
-      {sheet?.kind === 'edit' && (
-        <div className="sheet" role="dialog" aria-label="記録を編集">
-          <header className="sheet-head">
-            <button type="button" className="link" onClick={() => setSheet(null)}>‹ 戻る</button>
-            <h1>記録を編集</h1>
-            <span />
-          </header>
-          <div className="sheet-body">
-            <AmountPanel
-              title={displayName(sheet.log.name)}
-              officialName={sheet.log.name}
-              per100g={scale(sheet.log.nutrients, 10000 / sheet.log.grams)}
-              initialGrams={sheet.log.grams}
-              submitLabel="量を更新"
-              onSubmit={async (grams) => {
-                await updateFoodLogGrams(sheet.log.id, grams)
-                setSheet(null)
-              }}
-              onDelete={async () => {
-                await deleteFoodLog(sheet.log.id)
-                setSheet(null)
-              }}
-            />
+      <Overlay active={active}>
+        {sheet?.kind === 'add' && <AddFoodSheet date={date} meal={sheet.meal} />}
+        {sheet?.kind === 'edit' && (
+          <div className="sheet" role="dialog" aria-label="記録を編集">
+            <header className="sheet-head">
+              <button type="button" className="link" onClick={closeLayer}>‹ 戻る</button>
+              <h1>記録を編集</h1>
+              <span />
+            </header>
+            <div className="sheet-body">
+              <AmountPanel
+                title={displayName(sheet.log.name)}
+                officialName={sheet.log.name}
+                foodId={sheet.log.foodId}
+                per100g={scale(sheet.log.nutrients, 10000 / sheet.log.grams)}
+                initial={sheet.log}
+                submitLabel="量を更新"
+                onSubmit={async (amount) => {
+                  await updateFoodLogAmount(sheet.log.id, amount)
+                  closeLayer()
+                }}
+                onDelete={async () => {
+                  await deleteFoodLog(sheet.log.id)
+                  closeLayer()
+                }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Overlay>
     </>
   )
 }

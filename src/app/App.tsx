@@ -24,15 +24,23 @@ export function App() {
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <h1>{current.label}</h1>
-      </header>
-      <main className="content">
-        {tab === 'home' && <HomeTab onGoMeal={() => setTab('meal')} />}
-        {tab === 'meal' && <MealTab />}
-        {tab === 'settings' && <SetupCheck />}
-        {(tab === 'exercise' || tab === 'review') && <ComingSoon name={current.label} />}
-      </main>
+      {/* stage: タブバー以外の領域。追加・編集の画面はここに重ねるので、タブバーはいつでも押せる。 */}
+      <div className="stage" id="stage">
+        <header className="topbar">
+          <h1>{current.label}</h1>
+        </header>
+        {/* 食事タブは表示を隠すだけで動かしたままにする（入力途中でほかのタブを見ても、戻れば続きから）。 */}
+        <main className="content" hidden={tab !== 'meal'}>
+          <MealTab active={tab === 'meal'} />
+        </main>
+        {tab !== 'meal' && (
+          <main className="content">
+            {tab === 'home' && <HomeTab onGoMeal={() => setTab('meal')} />}
+            {tab === 'settings' && <SetupCheck />}
+            {(tab === 'exercise' || tab === 'review') && <ComingSoon name={current.label} />}
+          </main>
+        )}
+      </div>
       <nav className="tabbar" aria-label="メインメニュー">
         {TABS.map((t) => (
           <button key={t.id} type="button" className="tab" aria-current={t.id === tab ? 'page' : undefined} onClick={() => setTab(t.id)}>
