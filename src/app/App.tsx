@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { MEALS } from '../db/db.ts'
+import { logsByDate } from '../db/foodLogs.ts'
+import { formatDateKey, todayKey } from '../lib/dates.ts'
+import { pfcPercent, sum } from '../lib/nutrition.ts'
 import { isStandalone, requestPersistence } from './device.ts'
+import { fmt } from './foods.ts'
+import { MealTab } from './MealTab.tsx'
 
 type TabId = 'home' | 'meal' | 'exercise' | 'review' | 'settings'
 
@@ -20,7 +27,12 @@ export function App() {
       <header className="topbar">
         <h1>{current.label}</h1>
       </header>
-      <main className="content">{tab === 'home' ? <SetupCheck /> : <ComingSoon name={current.label} />}</main>
+      <main className="content">
+        {tab === 'home' && <HomeTab onGoMeal={() => setTab('meal')} />}
+        {tab === 'meal' && <MealTab />}
+        {tab === 'settings' && <SetupCheck />}
+        {(tab === 'exercise' || tab === 'review') && <ComingSoon name={current.label} />}
+      </main>
       <nav className="tabbar" aria-label="メインメニュー">
         {TABS.map((t) => (
           <button key={t.id} type="button" className="tab" aria-current={t.id === tab ? 'page' : undefined} onClick={() => setTab(t.id)}>
@@ -42,10 +54,43 @@ function ComingSoon({ name }: { name: string }) {
   )
 }
 
+/** 今日の合計だけを出す仮のホーム。目標との比較や栄養素バーは、プロフィール設定を作ってから足す。 */
+function HomeTab({ onGoMeal }: { onGoMeal: () => void }) {
+  const date = todayKey()
+  const day = useLiveQuery(() => logsByDate(date), [date])
+  const items = day ? MEALS.flatMap((m) => day[m]) : []
+  const { total, unknown } = sum(items.map((l) => l.nutrients))
+  const pfc = pfcPercent(total)
+  const rows = [
+    { label: 'たんぱく質', grams: total.proteinG, pct: pfc?.protein },
+    { label: '脂質', grams: total.fatG, pct: pfc?.fat },
+    { label: '炭水化物', grams: total.carbG, pct: pfc?.carb },
+  ]
+  return (
+    <>
+      <section className="card">
+        <p className="muted small">{formatDateKey(date)}・今日食べた合計</p>
+        <p className="hero"><strong>{fmt(total.energyKcal)}</strong> kcal</p>
+        <dl className="pfc wide">
+          {rows.map((r) => (
+            <div key={r.label}><dt>{r.label}</dt><dd>{fmt(r.grams, 1)}g{r.pct !== undefined && <small>　{fmt(r.pct)}%</small>}</dd></div>
+          ))}
+        </dl>
+        {unknown.energyKcal > 0 && <p className="muted small">値が不明な記録を含みます。</p>}
+        <button type="button" className="primary" onClick={onGoMeal}>{items.length === 0 ? '食事を記録する' : '食事を追加・編集する'}</button>
+      </section>
+      <section className="card">
+        <h2>目標との比較はこれからです</h2>
+        <p className="muted">プロフィール（年齢・体重など）の設定画面ができると、目標カロリーと栄養素ごとの過不足がここに出ます。</p>
+      </section>
+    </>
+  )
+}
+
 type Check = { state: 'ok' | 'ng' | 'wait'; detail: string }
 const WAIT: Check = { state: 'wait', detail: '確認中…' }
 
-/** ステップ1の動作確認用。食事記録の画面ができたら、この表示は設定タブに移す。 */
+/** アプリの土台の動作確認。設定タブに表示する。 */
 function SetupCheck() {
   const [foods, setFoods] = useState<Check>(WAIT)
   const [persist, setPersist] = useState<Check>(WAIT)
@@ -80,8 +125,8 @@ function SetupCheck() {
   return (
     <>
       <section className="card">
-        <h2>アプリの土台ができました</h2>
-        <p className="muted">下の4つがすべて緑なら、記録を始める準備は完了です。</p>
+        <h2>アプリの状態</h2>
+        <p className="muted">上の3つが緑なら問題ありません。</p>
         <ul className="checks">
           <CheckRow title="ホーム画面から起動" check={home} />
           <CheckRow title="食品データ" check={foods} />

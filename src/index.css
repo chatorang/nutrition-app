@@ -58,3 +58,78 @@ h1, h2, p, ul { margin: 0; padding: 0; }
 .tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tab[aria-current='page'] { color: var(--accent); font-weight: 700; }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 10px; }
+
+/* ---- 共通の部品 ---- */
+button { font: inherit; color: inherit; }
+.small { font-size: 0.8rem; }
+.pad { padding: 4px 2px; }
+.error { color: var(--warn); font-size: 0.9rem; }
+.primary { appearance: none; border: 0; border-radius: 14px; background: var(--accent); color: var(--bg); font-weight: 700; font-size: 1.05rem; min-height: 52px; padding: 0 18px; cursor: pointer; }
+.primary:disabled { opacity: 0.4; }
+.danger { appearance: none; border: 0; background: none; color: #c0392b; min-height: 48px; cursor: pointer; }
+.link { appearance: none; border: 0; background: none; color: var(--accent); min-height: 44px; padding: 0 4px; cursor: pointer; font-size: 1rem; }
+.link.strong { font-weight: 700; }
+.step { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; width: 48px; height: 48px; font-size: 1.4rem; line-height: 1; cursor: pointer; flex: none; }
+.step:disabled { opacity: 0.3; }
+:is(.primary, .danger, .link, .step, .chip, .row, .add, .date-label):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- ホーム ---- */
+.hero { font-size: 1rem; }
+.hero strong { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.01em; }
+.pfc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin: 0; }
+.pfc div { display: flex; flex-direction: column; }
+.pfc dt { color: var(--muted); font-size: 0.75rem; }
+.pfc dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pfc dd small { color: var(--muted); font-weight: 400; }
+.pfc.wide { margin: 4px 0 8px; }
+
+/* ---- 食事タブ ---- */
+.datebar { display: flex; align-items: center; gap: 10px; }
+.date-label { flex: 1; appearance: none; border: 0; background: none; display: flex; flex-direction: column; align-items: center; min-height: 48px; cursor: pointer; }
+.date-label strong { font-size: 1.1rem; }
+.day-total { text-align: center; }
+.day-total strong { font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+.meal { gap: 6px; padding: 14px 16px; }
+.meal-head { display: flex; align-items: center; gap: 10px; }
+.meal-head h2 { flex: none; }
+.meal-head .muted { flex: 1; font-variant-numeric: tabular-nums; }
+.add { appearance: none; border: 0; border-radius: 999px; background: var(--ok-bg); color: var(--ok); font-weight: 700; min-height: 44px; padding: 0 16px; cursor: pointer; }
+
+.rows { list-style: none; display: flex; flex-direction: column; }
+.rows li + li { border-top: 1px solid var(--line); }
+.rows.inset { border-top: 1px solid var(--line); margin-top: 4px; }
+.row { appearance: none; border: 0; background: none; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 12px 2px; min-height: 56px; cursor: pointer; }
+.row.split { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.row.split > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.row-main { font-weight: 600; overflow-wrap: anywhere; }
+.row-sub { color: var(--muted); font-size: 0.82rem; }
+.row-kcal { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+.row-kcal small { color: var(--muted); font-weight: 400; margin-left: 2px; }
+
+/* ---- 上に重ねる画面（追加・編集） ---- */
+.sheet { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: flex; flex-direction: column; max-width: 640px; margin: 0 auto; }
+.sheet-head { display: grid; grid-template-columns: 76px 1fr 76px; align-items: center; padding: calc(env(safe-area-inset-top) + 6px) 12px 6px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.sheet-head h1 { font-size: 1.05rem; text-align: center; }
+.sheet-head > :last-child { justify-self: end; }
+.sheet-head > :first-child { justify-self: start; }
+.search-row { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.search-row input { width: 100%; font: inherit; font-size: 1rem; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); appearance: none; }
+.search-row input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px calc(env(safe-area-inset-bottom) + 24px); }
+.list-title { font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 6px 0 2px; }
+.toast { background: var(--ok-bg); color: var(--ok); border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
+
+/* ---- 量の入力 ---- */
+.amount { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.amount h2 { font-size: 1.25rem; overflow-wrap: anywhere; }
+.gram-row { display: flex; align-items: center; gap: 12px; }
+.gram-input { flex: 1; display: flex; align-items: baseline; justify-content: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; }
+.gram-input:focus-within { outline: 2px solid var(--accent); }
+.gram-input input { width: 100%; min-width: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 2rem; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; outline: none; }
+.gram-input span { color: var(--muted); font-size: 1.1rem; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; min-height: 44px; padding: 0 16px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed='true'] { background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 700; }
+.nutri-box { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.kcal strong { font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+.kcal span { color: var(--muted); margin-left: 6px; }
